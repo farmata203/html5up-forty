@@ -1,5 +1,5 @@
-name: CI-CD Docker Pipeline
-
+name: "CI-CD Docker Pipeline"
+# kekkke
 on:
   push:
     branches:
@@ -8,16 +8,12 @@ on:
 env:
   IMAGE_NAME: ci-html
   IMAGE_TAG: 1.0.1
-  DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
 
 jobs:
-
-  # ===============================
-  # JOB 1 - CI : BUILD + PUSH + SCAN
-  # ===============================
   ci:
     runs-on: ubuntu-latest
-
+    env:
+      DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -34,54 +30,43 @@ jobs:
           docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Build Docker image
-        run: |
-          docker build -t $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+        run: docker build -t $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
 
       - name: Verify image
-        run: |
-          docker image ls | grep $IMAGE_NAME
+        run: docker image ls | grep $IMAGE_NAME
 
-      - name: Push Docker image
-        run: |
-          docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
-
-      # CORRECTION 1 : image-ref utilise les variables d'env (plus de valeurs en dur)
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # v0.35.0
         with:
           image-ref: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           format: table
           severity: CRITICAL,HIGH
-          exit-code: 1
+          exit-code: '1'
           vuln-type: os,library
           ignore-unfixed: true
 
-  # ===============================
-  # JOB 2 - CD : DEPLOY
-  # ===============================
+      - name: Push Docker image
+        run: docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+
   deploy:
     needs: ci
-    # CORRECTION 2 : remplacer aws-runner par le label de votre self-hosted runner
-    # Si vous n'avez pas de self-hosted runner, utilisez ubuntu-latest
-    runs-on: [self-hosted, aws]
-
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
-      # CORRECTION 3 : step dupliqué supprimé, remplacé par un log clair
-      - name: Log deploy start
+      - name: Login to Docker Hub
         run: |
-          echo "Starting deployment of $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | \
+          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Pull latest image
-        run: |
-          docker pull $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+        run: docker pull $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
 
       - name: Stop existing container
-        run: |
-          docker stop ci-app || true
+        run: docker stop ci-app || true
 
       - name: Remove old container
-        run: |
-          docker rm ci-app || true
+        run: docker rm ci-app || true
 
       - name: Run new container
         run: |
