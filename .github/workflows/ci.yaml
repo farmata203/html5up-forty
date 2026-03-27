@@ -45,10 +45,11 @@ jobs:
         run: |
           docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
 
+      # CORRECTION 1 : image-ref utilise les variables d'env (plus de valeurs en dur)
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/ci-html-demo:latest
+          image-ref: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           format: table
           severity: CRITICAL,HIGH
           exit-code: 1
@@ -60,12 +61,15 @@ jobs:
   # ===============================
   deploy:
     needs: ci
-    runs-on: aws-runner
+    # CORRECTION 2 : remplacer aws-runner par le label de votre self-hosted runner
+    # Si vous n'avez pas de self-hosted runner, utilisez ubuntu-latest
+    runs-on: [self-hosted, aws]
 
     steps:
-      - name: Pull latest image
+      # CORRECTION 3 : step dupliqué supprimé, remplacé par un log clair
+      - name: Log deploy start
         run: |
-          echo "Hello deploy"
+          echo "Starting deployment of $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
 
       - name: Pull latest image
         run: |
