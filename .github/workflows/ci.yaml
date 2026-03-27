@@ -1,5 +1,5 @@
 name: "CI-CD Docker Pipeline"
-# kekkke
+
 on:
   push:
     branches:
@@ -8,12 +8,12 @@ on:
 env:
   IMAGE_NAME: ci-html
   IMAGE_TAG: 1.0.1
-# dddddddd
+
 jobs:
   ci:
     runs-on: ubuntu-latest
     env:
-      DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKER_REGISTRY: ${{ secrets.DOCKER_USERNAME }}
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -26,8 +26,8 @@ jobs:
 
       - name: Login to Docker Hub
         run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | \
-          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          echo "${{ secrets.DOCKER_PASSWORD }}" | \
+          docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build Docker image
         run: docker build -t $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
@@ -52,12 +52,12 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     env:
-      DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKER_REGISTRY: ${{ secrets.DOCKER_USERNAME }}
     steps:
       - name: Login to Docker Hub
         run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | \
-          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          echo "${{ secrets.DOCKER_PASSWORD }}" | \
+          docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Pull latest image
         run: docker pull $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
